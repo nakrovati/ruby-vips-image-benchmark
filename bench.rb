@@ -7,11 +7,24 @@ Vips.block_untrusted(false)
 SOURCE_DIR = "./src-images"
 OUTPUT_DIR = "./out-images"
 
-FORMATS = {
-  "jpg"  => 82,
-  "webp" => 78,
-  "avif" => 55,
-  "jxl"  => 85
+CONFIGS = {
+  "webp" => {
+    quality: 85,
+    effort: 6,
+    smart_subsample: true,
+    smart_deblock: true
+  },
+  "avif" => {
+    quality: 65,
+    effort: 9,
+    bitdepth: 8,
+    compression: :av1
+  },
+  "jxl" => {
+    distance: 1.0,
+    effort: 7,
+    bitdepth: 8
+  }
 }.freeze
 
 SUPPORTED_EXTENSIONS = %w[
@@ -26,7 +39,7 @@ images = Dir.glob("#{SOURCE_DIR}/*")
 
 raise "No images found in #{SOURCE_DIR}" if images.empty?
 
-FORMATS.each_key do |format|
+CONFIGS.each_key do |format|
   FileUtils.mkdir_p("#{OUTPUT_DIR}/#{format}")
 end
 
@@ -38,7 +51,7 @@ images.each do |source|
 
   puts "\n#{File.basename(source)}"
 
-  FORMATS.each do |format, quality|
+  CONFIGS.each do |format, options|
     destination = "#{OUTPUT_DIR}/#{format}/#{image_name}.#{format}"
 
     time = Benchmark.realtime do
@@ -46,7 +59,7 @@ images.each do |source|
         .source(source)
         .resize_to_limit(1200, nil)
         .convert(format)
-        .saver(quality:)
+        .saver(**options)
         .call(destination:)
     end
 
@@ -65,7 +78,7 @@ puts "\n" + "=" * 60
 puts "SUMMARY"
 puts "=" * 60
 
-FORMATS.each_key do |format|
+CONFIGS.each_key do |format|
   size = total_sizes[format]
 
   puts format.ljust(5) +
@@ -76,7 +89,7 @@ end
 
 puts "\nDirectories:"
 
-FORMATS.each_key do |format|
+CONFIGS.each_key do |format|
   directory_size = Dir
     .glob("#{OUTPUT_DIR}/#{format}/**/*")
     .select { |path| File.file?(path) }
